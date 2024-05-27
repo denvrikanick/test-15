@@ -1,0 +1,154 @@
+import pygame
+import random
+
+# Initialize pygame
+pygame.init()
+
+# Screen dimensions
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
+
+# Colors
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+BLUE = (0, 0, 255)
+YELLOW = (255, 255, 0)
+
+# Set up the display
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption("Space Invaders")
+
+# Clock to control the game's frame rate
+clock = pygame.time.Clock()
+
+# Load images
+player_img = pygame.image.load('player.png')
+enemy_img = pygame.image.load('enemy.png')
+bullet_img = pygame.image.load('bullet.png')
+
+# Player class
+class Player:
+    def __init__(self):
+        self.image = player_img
+        self.x = SCREEN_WIDTH // 2
+        self.y = SCREEN_HEIGHT - 100
+        self.x_change = 0
+        self.speed = 5
+
+    def move(self):
+        self.x += self.x_change
+        if self.x <= 0:
+            self.x = 0
+        elif self.x >= SCREEN_WIDTH - 64:
+            self.x = SCREEN_WIDTH - 64
+
+    def draw(self):
+        screen.blit(self.image, (self.x, self.y))
+
+# Enemy class
+class Enemy:
+    def __init__(self):
+        self.image = enemy_img
+        self.x = random.randint(0, SCREEN_WIDTH - 64)
+        self.y = random.randint(50, 150)
+        self.x_change = 3
+        self.y_change = 40
+
+    def move(self):
+        self.x += self.x_change
+        if self.x <= 0:
+            self.x_change = 3
+            self.y += self.y_change
+        elif self.x >= SCREEN_WIDTH - 64:
+            self.x_change = -3
+            self.y += self.y_change
+
+    def draw(self):
+        screen.blit(self.image, (self.x, self.y))
+
+# Bullet class
+class Bullet:
+    def __init__(self):
+        self.image = bullet_img
+        self.x = 0
+        self.y = 0
+        self.y_change = 10
+        self.state = "ready"
+
+    def fire(self, x, y):
+        self.state = "fire"
+        self.x = x
+        self.y = y
+
+    def move(self):
+        if self.state == "fire":
+            self.y -= self.y_change
+            screen.blit(self.image, (self.x + 16, self.y + 10))
+        if self.y <= 0:
+            self.state = "ready"
+
+# Collision detection
+def is_collision(enemy, bullet):
+    distance = ((enemy.x - bullet.x)**2 + (enemy.y - bullet.y)**2) ** 0.5
+    return distance < 27
+
+# Main game loop
+def game_loop():
+    player = Player()
+    enemies = [Enemy() for _ in range(6)]
+    bullet = Bullet()
+    score = 0
+    font = pygame.font.SysFont(None, 36)
+
+    run = True
+    while run:
+        screen.fill(BLACK)
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                run = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT:
+                    player.x_change = -player.speed
+                if event.key == pygame.K_RIGHT:
+                    player.x_change = player.speed
+                if event.key == pygame.K_SPACE:
+                    if bullet.state == "ready":
+                        bullet.fire(player.x, player.y)
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
+                    player.x_change = 0
+
+        player.move()
+        player.draw()
+
+        for enemy in enemies:
+            enemy.move()
+            enemy.draw()
+            if is_collision(enemy, bullet):
+                bullet.state = "ready"
+                bullet.y = player.y
+                score += 1
+                enemy.x = random.randint(0, SCREEN_WIDTH - 64)
+                enemy.y = random.randint(50, 150)
+
+            if enemy.y > SCREEN_HEIGHT - 100:
+                for e in enemies:
+                    e.y = SCREEN_HEIGHT + 100
+                run = False
+
+        if bullet.state == "fire":
+            bullet.move()
+
+        score_text = font.render(f"Score: {score}", True, WHITE)
+        screen.blit(score_text, (10, 10))
+
+        pygame.display.update()
+        clock.tick(60)
+
+    pygame.quit()
+
+if __name__ == "__main__":
+    game_loop()
